@@ -9,7 +9,7 @@
 (define (pre-installer collections-top-path racl-path)
   (define private-path (build-path racl-path "private"))
   (define unpacked-path (path->string (build-path private-path "gnulib")))
-  (define gnulib-objects (path->string build-path private-path "gnulib" "*.o"))
+  (define gnulib-objects (path->string (build-path private-path "gnulib" "*.o")))
 
   (define fadvise-path (path->string (build-path private-path "fadvise" "fadvise.c")))
   (define fadvise-output-path (path->string (build-path private-path "fadvise.o")))
