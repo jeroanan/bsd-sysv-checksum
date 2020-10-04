@@ -3,7 +3,7 @@
 (define deps '("base"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/bsd-sysv-checksum.scrbl" ())))
-(define pkg-desc "")
+(define pkg-desc "Allows for calculation of BSD and System V checksums of files. Uses code from GNU Coreutils and gnulib.")
 (define version "0.0")
 (define pre-install-collection "private/install.rkt")
 (define compile-omit-files '("private/install.rkt"))
