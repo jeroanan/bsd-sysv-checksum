@@ -1,50 +1,66 @@
 #lang racket/base
 
-(module+ test
-  (require rackunit))
+; Copyright 2020 David Wilson
+; See COPYING for details.
 
-;; Notice
-;; To install (from within the package directory):
-;;   $ raco pkg install
-;; To install (once uploaded to pkgs.racket-lang.org):
-;;   $ raco pkg install <<name>>
-;; To uninstall:
-;;   $ raco pkg remove <<name>>
-;; To view documentation:
-;;   $ raco docs <<name>>
-;;
-;; For your convenience, we have included LICENSE-MIT and LICENSE-APACHE files.
-;; If you would prefer to use a different license, replace those files with the
-;; desired license.
-;;
-;; Some users like to add a `private/` directory, place auxiliary files there,
-;; and require them in `main.rkt`.
-;;
-;; See the current version of the racket style guide here:
-;; http://docs.racket-lang.org/style/index.html
+(provide get-bsd-sum
+         get-sysv-sum)
 
-;; Code here
+(require ffi/unsafe
+         racket/list
+         racket/runtime-path
+         racket/string
+         (for-syntax racket/base))
 
+(define-runtime-path lib-path (build-path "private" "sum"))
+(define clib (ffi-lib lib-path))
 
+(define _sysv-sum-file
+  (get-ffi-obj "sysv_sum_file" clib
+               (_fun _string (o : (_ptr o _sum)) 
+                     -> (r : _int)
+                     -> o)))
 
-(module+ test
-  ;; Any code in this `test` submodule runs when this file is run using DrRacket
-  ;; or with `raco test`. The code here does not run when this file is
-  ;; required by another module.
+(define (_bytes/len n)
+  (make-ctype (make-array-type _byte n)
+              ;; see https://github.com/dyoo/ffi-tutorial
 
-  (check-equal? (+ 2 2) 4))
+              ;; ->c
+              (lambda (v)
+                (unless (and (bytes? v) (= (bytes-length v) n))
+                  (raise-argument-error '_chars/bytes 
+                                        (format "bytes of length ~a" n)
+                                        v))
+                v)
 
-(module+ main
-  ;; (Optional) main submodule. Put code here if you need it to be executed when
-  ;; this file is run using DrRacket or the `racket` executable.  The code here
-  ;; does not run when this file is required by another module. Documentation:
-  ;; http://docs.racket-lang.org/guide/Module_Syntax.html#%28part._main-and-test%29
+              ;; ->racket
+              (lambda (v)
+                (make-sized-byte-string v n))))
 
-  (require racket/cmdline)
-  (define who (box "world"))
-  (command-line
-    #:program "my-program"
-    #:once-each
-    [("-n" "--name") name "Who to say hello to" (set-box! who name)]
-    #:args ()
-    (printf "hello ~a~n" (unbox who))))
+(define _sum-len 99)
+(define _sum (_bytes/len _sum-len))
+
+(define _bsd-sum-file
+  (get-ffi-obj "bsd_sum_file" clib
+               (_fun _string (o : (_ptr o _sum)) 
+                     -> (r : _int)
+                     -> o)))
+(define (bytes->string bs)
+  (define bytes-list (bytes->list bs))  
+  (define first-null (index-of bytes-list 0))
+  (define no-nulls (take bytes-list first-null))
+  (define output (list->bytes no-nulls))
+  (bytes->string/utf-8 output))
+
+(define (get-bsd-sum filename)
+  (define raw-sum (_bsd-sum-file filename))
+  (define string-output (bytes->string raw-sum))
+  (define split (string-split string-output " "))
+  (list (first split) (string->number (last split))))
+
+(define (get-sysv-sum filename)
+  (define raw-sum (_sysv-sum-file filename))
+  (define string-output (bytes->string raw-sum))
+  (define split (string-split string-output " "))
+  (list (first split) (string->number (last split))))
+

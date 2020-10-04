@@ -27,7 +27,9 @@
   (system (string-append "gcc -c -fPIC "sum-path" -o"sum-output-path" -I"gnulib-path))
   (system (string-append "gcc "sum-output-path" "fadvise-output-path" "gnulib-objects" -shared -o "output-path" -I"gnulib-path))
   
-  (delete-directory/files unpacked-path))
+  (delete-directory/files unpacked-path)
+  (delete-file fadvise-output-path)
+  (delete-file sum-output-path))
 
 
   
